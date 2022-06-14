@@ -1,6 +1,24 @@
 {
   "pins" : [
     {
+      "identity" : "nanoseconds",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dominicegginton/Nanoseconds",
+      "state" : {
+        "revision" : "d874aa99470f12f38a1b9315c0a481adfaacc8b5",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "rainbow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/onevcat/Rainbow",
+      "state" : {
+        "revision" : "e0dada9cd44e3fa7ec3b867e49a8ddbf543e3df3",
+        "version" : "4.0.1"
+      }
+    },
+    {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
@@ -25,6 +43,15 @@
       "state" : {
         "revision" : "b7667f3e266af621e5cc9c77e74cacd8e8c00cb4",
         "version" : "0.2.5"
+      }
+    },
+    {
+      "identity" : "tlogger",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/xbladesub/TLogger",
+      "state" : {
+        "revision" : "0b2dc79c1fc869c1f16fd9cca1b71a8657f1fb1a",
+        "version" : "0.0.1"
       }
     }
   ],
