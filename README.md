@@ -1,3 +1,3 @@
 # swolc
 
-A description of this package.
+Command line tool to easily convert solidity contract abi to JSON string.
