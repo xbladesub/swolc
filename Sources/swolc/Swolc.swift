@@ -10,14 +10,20 @@ struct Swolc: ParsableCommand {
         subcommands: []
     )
 
-    @Option(name: [.customShort("a"), .customLong("abi")], help: "Solidity file path")
+    // @Option(name: [.customShort("a"), .customLong("abi")], help: "Solidity file path")
+    // var solidilyFilePath: String!
+
+    @Argument(help: "solidity file including contract/s")
     var solidilyFilePath: String!
 }
 
 extension Swolc {
     func run() throws {
-        let scrapperRange = (top: "Contract JSON ABI", bottom: "\n\n")
+        let jsonScrapperRange = (top: "Contract JSON ABI", bottom: "\n\n")
+        let contractNameScrapperRange = (top: "======= ", bottom: " =======")
         var jsonArray: [String] = []
+        var contractNameArray: [String] = []
+        var resultDict: [String: String] = [:]
 
         if isSolidityFilePathURL(solidilyFilePath) {
             do {
@@ -30,18 +36,56 @@ extension Swolc {
 
                 try safeShell("solc --abi \(solidilyFilePath!)") { solcABIRes in
                     let resModified = solcABIRes + "\n"
-                    let topRanges = resModified.ranges(of: scrapperRange.top)
-                    let bottomRanges = resModified.ranges(of: scrapperRange.bottom)
+
+                    let topRanges = resModified.ranges(of: jsonScrapperRange.top)
+                    let bottomRanges = resModified.ranges(of: jsonScrapperRange.bottom)
+
+                    let topNameRanges = resModified.ranges(of: contractNameScrapperRange.top)
+                    let bottomNameRanges = resModified.ranges(of: contractNameScrapperRange.bottom)
+
                     let ranges = zip(topRanges, bottomRanges)
+                    let nameRanges = zip(topNameRanges, bottomNameRanges)
+
                     ranges.forEach {
                         let finalRange = $0.upperBound ..< $1.lowerBound
                         let abiJSONString = String(describing: resModified)[finalRange]
                         jsonArray.append(String(abiJSONString))
                     }
 
-                    try! safeShell("echo $'\(jsonArray[0])' | pbcopy") { _ in }
-                    // print("total ABIs: \(jsonArray.count)")
-                    print(jsonArray[0]) 
+                    nameRanges.forEach {
+                        let finalRange = $0.upperBound ..< $1.lowerBound
+                        let rawLine = String(describing: resModified)[finalRange]
+                        if let contractName = rawLine.components(separatedBy: ":").last {
+                            contractNameArray.append(contractName)
+                        }
+                    }
+
+                    resultDict = Dictionary(uniqueKeysWithValues: zip(contractNameArray, jsonArray))
+
+                    if resultDict.count > 1 {
+                        print("Found contracts: \n".cyan)
+                        let contractsString = contractNameArray.enumerated().map { "\($0 + 1) - \($1)" }.joined(separator: "\n")
+                        print(contractsString.cyan)
+                        print("\ncotract number: ".cyan, terminator: "")
+                        guard let input = readLine(), let num = Int(input) else {
+                            Log.error("invalid number")
+                            return RunLoop.exit()
+                        }
+
+                        let selectedContractName = contractNameArray[num - 1]
+                        
+                        let contractABIJsonString = resultDict[selectedContractName]!.asJsonString
+                        print("\n" + contractABIJsonString.yellow)
+
+                        try! safeShell("echo '\(contractABIJsonString)' | tr -d '\n' | pbcopy") { _ in }
+                        print("\n'\(selectedContractName)' ABI copied to clipboard".cyan)
+                    } else {
+                        let contractName = resultDict.keys.first!
+                        let contractABIJsonString = resultDict.values.first!.asJsonString
+                        print("\n" + contractABIJsonString.yellow)
+                        try! safeShell("echo '\(contractABIJsonString)' | tr -d '\n' | pbcopy") { _ in }
+                        print("\n'\(contractName)' ABI copied to clipboard".cyan)
+                    }
                     RunLoop.exit()
                 }
                 RunLoop.enter()
@@ -81,31 +125,22 @@ func safeShell(_ command: String, completion: @escaping (String) -> Void) throws
     try task.run()
 }
 
-typealias LineState = (
-    // pointer to a C string representing a line
-    linePtr: UnsafeMutablePointer<CChar>?,
-    linecap: Int,
-    filePtr: UnsafeMutablePointer<FILE>?
-)
-
-/// Returns a sequence which iterates through all lines of the the file at the URL.
-///
-/// - Parameter url: file URL of a file to read
-/// - Returns: a Sequence which lazily iterates through lines of the file
-///
-/// - warning: the caller of this function **must** iterate through all lines of the file, since aborting iteration midway will leak memory and a file pointer
-/// - precondition: the file must be UTF8-encoded (which includes, ASCII-encoded)
-func lines(ofFile fileURL: URL) -> UnfoldSequence<String, LineState> {
-    let initialState: LineState = (linePtr: nil, linecap: 0, filePtr: fopen(fileURL.path, "r"))
-    return sequence(state: initialState, next: { state -> String? in
-        if getline(&state.linePtr, &state.linecap, state.filePtr) > 0,
-           let theLine = state.linePtr
-        {
-            return String(cString: theLine)
-        } else {
-            if let actualLine = state.linePtr { free(actualLine) }
-            fclose(state.filePtr)
-            return nil
+func convertIntoJSONString(arrayObject: [Any]) -> String? {
+    do {
+        let jsonData: Data = try JSONSerialization.data(withJSONObject: arrayObject, options: [])
+        if let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue) {
+            return jsonString as String
         }
-    })
+
+    } catch let error as NSError {
+        print("Array convertIntoJSON - \(error.description)")
+    }
+    return nil
+}
+
+extension String {
+    var asJsonString: Self {
+        let asJsonString = replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\n", with: "")
+        return asJsonString
+    }
 }
