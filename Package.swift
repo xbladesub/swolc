@@ -6,6 +6,9 @@ import PackageDescription
 let package = Package(
     name: "swolc",
     platforms: [.macOS(.v10_15)],
+    products: [
+        .executable(name: "swolc", targets: ["swolc"])
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.1.2"),
         .package(url: "https://github.com/apple/swift-tools-support-core", from: "0.0.1"),
