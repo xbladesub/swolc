@@ -5,7 +5,7 @@ import TLogger
 @main
 struct Swolc: ParsableCommand {
     static var configuration = CommandConfiguration(
-        abstract: "Solidity ABI manipulations",
+        abstract: "Solidity compiler wrapper tool",
         version: "1.0.0",
         subcommands: []
     )
